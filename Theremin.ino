@@ -1,16 +1,24 @@
 /* Theremin: Corporate Edition */
+/* Uses NewPing (https://playground.arduino.cc/Code/NewPing) and toneAC (https://playground.arduino.cc/Code/ToneAC) */
 
 #include <stdio.h>
 #include <math.h>
+#include <toneAC.h>
+#include <NewPing.h>
 
-int pitchDistanceSensorPin = 0;
-int volumeDistanceSensorPin = 1;
-int speakerPin = 2;
+/* ? Configuration */
+/* Make sure the speaker is connected to the proper pins, in the case of the UNO it is PWM pins 9 & 10, toneAC will automatically push to those without logical configuration */
+
+int pitchDistanceSensorInputPin = 0;
+int pitchDistanceSensorOutputPin = 0;
+int volumeDistanceSensorInputPin = 1;
+int volumeDistanceSensorOutputPin = 1;
 
 int pitchSensorDistance = 0;
 int volumeSensorDistance = 0;
 
-/* Configuration */
+
+/* ? Configuration */
 
 /* Set the lowest note possible, in hertz https://pages.mtu.edu/~suits/notefreqs.html */
 double lowestNoteFrequency = 110;
@@ -27,28 +35,45 @@ double maxDistanceRange = 50;
 /* Sets how many centimetres the hand needs to move in order to change the pitch by one note */
 double distancePitchScaleFactor = 0;
 
+NewPing pitchDistanceSensor = NewPing(pitchDistanceSensorOutputPin, pitchDistanceSensorInputPin, maxDistanceRange);
+NewPing volumeDistanceSensor = NewPing(volumeDistanceSensorOutputPin, volumeDistanceSensorInputPin, maxDistanceRange);
+
 void setup() {
-  /* Setup pins */
+
+  Serial.begin(9600);
+/*  
+  / Setup pins /
   pinMode(pitchDistanceSensorPin, INPUT);
   pinMode(volumeDistanceSensorPin, INPUT);
   pinMode(speakerPin, OUTPUT);
+*/
 
   /* Calculates values to determine the factor between pitch and distance, in centimetres */
   distancePitchScaleFactor = maxDistanceRange/(12*(log(highestNoteFrequency/lowestNoteFrequency)/log(2)));
-  
+ 
+   
 }
 
 void loop() {
   /* */
+
+  toneAC(pitch(pitchDistanceSensor.ping_cm()),volume(volumeDistanceSensor.ping_cm()));
+
   
 }
 
-double volume(double distance) {
-  return ln(distance);
+int volume(int distance) {
+  return int(10-(((float)distance/maxDistanceRange)*10));
 }
 
 /* Generates pitch based on distance */
-double pitch(double distance) {
-  return lowestNoteFrequency*pow(2, (pitchSensorDistance*distancePitchScaleFactor)/12)
+int pitch(int distance) {
+  if (distance <= maxDistanceRange) {
+    return (int)(lowestNoteFrequency*pow(2, ((double)distance)/12));
+  }
+  else {
+    return 0;
+  }
+  
 }
 
